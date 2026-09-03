@@ -1,0 +1,6 @@
+{
+  "name": "SinoLiv-Streams",
+  "description": "Turn any video into a 24/7 live stream on YouTube, Facebook, and Instagram.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
