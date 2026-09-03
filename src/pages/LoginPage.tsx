@@ -3,32 +3,48 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
+import { api } from '@/src/lib/api';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
     try {
-      // Simulation
-      setTimeout(() => {
-        login('dummy_token', { 
-          id: '1', 
-          name: 'User', 
-          email,
-          planId: 'starter'
-        });
-        navigate('/dashboard');
-      }, 800);
-    } catch (err) {
+      const response = await api.post('/api/auth/login', { email, password });
+      login(response.token, response.user);
+      navigate('/dashboard');
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/api/auth/google', { 
+        token: credentialResponse.credential 
+      });
+      login(response.token, response.user);
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Google login failed.');
     } finally {
       setIsLoading(false);
     }
@@ -51,6 +67,34 @@ export default function LoginPage() {
         className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-6"
       >
         <div className="bg-white py-10 px-8 rounded-3xl shadow-sm border border-gray-100">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-8 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Google Sign-In was cancelled or failed.')}
+              useOneTap
+              theme="outline"
+              size="large"
+              width="100%"
+              text="continue_with"
+              shape="circle"
+            />
+          </div>
+
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-100"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-400">Or sign in with email</span>
+            </div>
+          </div>
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>

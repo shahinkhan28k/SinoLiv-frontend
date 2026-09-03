@@ -3,36 +3,47 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 import { api } from '@/src/lib/api';
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData);
 
     try {
-      // Simulation: Replace with real API call
-      // const res = await api.post('/api/auth/register', data);
-      // login(res.token, res.user);
-      
-      setTimeout(() => {
-        login('dummy_token', { 
-          id: '1', 
-          name: data.name as string, 
-          email: data.email as string,
-          planId: 'starter'
-        });
-        navigate('/dashboard');
-      }, 1000);
-    } catch (err) {
+      const response = await api.post('/api/auth/register', data);
+      login(response.token, response.user);
+      navigate('/dashboard');
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/api/auth/google', { 
+        token: credentialResponse.credential 
+      });
+      login(response.token, response.user);
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Google signup failed.');
     } finally {
       setIsLoading(false);
     }
@@ -55,6 +66,34 @@ export default function SignupPage() {
         className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-6"
       >
         <div className="bg-white py-10 px-8 rounded-3xl shadow-sm border border-gray-100">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-8 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Google Sign-In was cancelled or failed.')}
+              useOneTap
+              theme="outline"
+              size="large"
+              width="100%"
+              text="continue_with"
+              shape="circle"
+            />
+          </div>
+
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-100"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-400">Or sign up with email</span>
+            </div>
+          </div>
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
